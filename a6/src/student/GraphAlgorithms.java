@@ -42,7 +42,7 @@ public class GraphAlgorithms  {
 		return result;
 	}
 	
-	private static class Path<N,E> {
+	public static class Path<N,E> {
 		N           node;
 		Path<N,E>   parent;
 		int         distance;
