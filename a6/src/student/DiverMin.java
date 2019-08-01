@@ -43,16 +43,16 @@ public class DiverMin implements SewerDiver {
 	@Override
 	public void find(FindState state) {
 		//Get distance to ring
-		int DIST = state.distanceToRing();
-		while (DIST > 0) {
+		int dist = state.distanceToRing();
+		while (dist > 0) {
 			//Initialize variable MINDIST, and loop over adjacent tiles to find the one with the most
-			NodeStatus MINDIST = null;
+			NodeStatus min_dist = null;
 			for(NodeStatus z : state.neighbors()) {
-				if (z.compareTo(MINDIST) <= 0) {
-					MINDIST = z;
+				if (z.compareTo(min_dist) <= 0) {
+					min_dist = z;
 				}
 			}
-			state.moveTo(MINDIST.getId());
+			state.moveTo(min_dist.getId());
 		}
 		return;
 	}
@@ -89,7 +89,7 @@ public class DiverMin implements SewerDiver {
 		Node EXIT = state.getExit();
 		//Use Dijkstra's algorithm to get the minimum distance to the exit
 	
-		int STEPS_TO_EXIT = null;
+		int STEPS_TO_EXIT = 0;
 		
 		//While the current position is not the exit
 		while (state.currentNode() != EXIT) {
