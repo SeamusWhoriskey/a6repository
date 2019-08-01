@@ -1,5 +1,6 @@
 package student;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,7 +42,25 @@ public class DiverMin implements SewerDiver {
 	 * Some modification is necessary to make the search better, in general. */
 	@Override
 	public void find(FindState state) {
-    throw new NotImplementedError();
+		//Get distance to ring
+		int DIST = state.distanceToRing();
+		while (DIST > 0) {
+			//Get current location
+			long HERE_I_AM = state.currentLocation();
+			//Get places to move to
+			Collection<NodeStatus> ADJACENTS = state.neighbors();
+			Object[] A = ADJACENTS.toArray();
+			//Initialize variable MINDIST, and loop over adjacent tiles to find the one with the most
+			long MINDIST = HERE_I_AM;
+			for(NodeStatus z : ADJACENTS) {
+				if (z.compareTo(MINDIST) <= 0) {
+					MINDIST = z;
+				}
+			}
+			state.
+			state.moveTo(MINDIST);
+		}
+		return;
 	}
 	
 	/** Flee the sewer system before the steps are all used, trying to <br>
@@ -70,7 +89,30 @@ public class DiverMin implements SewerDiver {
 	 * the exit. */
 	@Override
 	public void flee(FleeState state) {
-    throw new NotImplementedError();
-	}
+		//Get current location
+		Node HERE_I_AM = state.currentNode();
+		//Get exit node, to save computing time on the loops
+		Node EXIT = state.getExit();
+		//Use Dijkstra's algorithm to get the minimum distance to the exit
+		
+		//
+		
+		//While the current position is not the exit
+		while (state.currentNode() != EXIT) {
+			//Use Dijkstra's Algorithm to find the shortest path to the exit
+			int STEPS_TO_EXIT = null;
+			//Flee once the length of the shortest path approaches the steps left 
+			if(state.stepsLeft() < STEPS_TO_EXIT+5) {
+				//Get a list of the nodes in the shortest path
+				List<Node> HOME_RUN = GraphAlgorithms.shortestPath(state.currentNode(), EXIT);
+				for(Node a : HOME_RUN) {
+					state.moveTo(a);
+				}
+			}
+			//Else, chart a path towards the most coins possible
+			
+		}
+		return;
+ 	}
 
 }
