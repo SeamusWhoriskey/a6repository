@@ -10,8 +10,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+<<<<<<< HEAD
 import a4.Heap;
 import a5.GraphAlgorithms;
+=======
+import GraphAlgorithms;
+>>>>>>> 421c69d3ff52fe5e826222cb19b8cd4fc42feec5
 import game.FindState;
 import game.FleeState;
 import game.NodeStatus;
@@ -53,6 +57,7 @@ public class DiverMin implements SewerDiver {
 	 * Some modification is necessary to make the search better, in general. */
 	@Override
 	public void find(FindState state) {
+<<<<<<< HEAD
 		
 		long curr_id = state.currentLocation();
 		for(NodeStatus z : state.neighbors()) {
@@ -67,6 +72,27 @@ public class DiverMin implements SewerDiver {
 				state.moveTo(curr_id);
 				
 			}
+=======
+		//Get distance to ring
+		//int DIST = state.distanceToRing();
+		//Create list of visited nodes
+		List<NodeStatus> BEEN_THERE_DONE_THAT = new ArrayList<NodeStatus> ();
+		//state.neighbors().remove(state.currentLocation());
+		while (state.distanceToRing() > 0) {
+			//Initialize variable MINDIST, and loop over adjacent tiles to find the one with the most
+			NodeStatus MINDIST = new NodeStatus(state.currentLocation(), 10000);
+			NodeStatus HERE_I_AM = new NodeStatus(state.currentLocation(), state.distanceToRing());
+			BEEN_THERE_DONE_THAT.add(HERE_I_AM);
+			Collection <NodeStatus> c = state.neighbors();
+			c.removeAll(BEEN_THERE_DONE_THAT);
+			for(NodeStatus z : c) {
+				if (z.compareTo(MINDIST) <= 0) {
+					MINDIST = z;
+				};
+			}
+			
+			state.moveTo(MINDIST.getId());
+>>>>>>> 421c69d3ff52fe5e826222cb19b8cd4fc42feec5
 		}
 
 		return;
@@ -99,6 +125,7 @@ public class DiverMin implements SewerDiver {
 	 * the exit. */
 	@Override
 	public void flee(FleeState state) {
+<<<<<<< HEAD
 		
 		
 		// Dumb shortest path version
@@ -226,6 +253,25 @@ public class DiverMin implements SewerDiver {
 						// Set the parent of neighbor to node_curr
 						parents.put(neighbor, node_curr);
 					}
+=======
+		//Get current location
+		Node HERE_I_AM = state.currentNode();
+		//Get exit node, to save computing time on the loops
+		Node EXIT = state.getExit();
+		//Initialize the distance to the exit
+		Double STEPS_TO_EXIT = Double.POSITIVE_INFINITY;
+		//While the current position is not the exit
+		while (state.currentNode() != EXIT) {
+			System.out.println("Still good");
+			//Flee once the length of the shortest path approaches the steps left 
+			if(state.stepsLeft() < STEPS_TO_EXIT) {
+				//Get a list of the nodes in the shortest path
+				List<Node> HOME_RUN = GraphAlgorithms.shortestPath(state.currentNode(), EXIT);
+				for(Node a : HOME_RUN) {
+					System.out.println(HOME_RUN);
+					state.moveTo(a);
+					System.out.println("good");
+>>>>>>> 421c69d3ff52fe5e826222cb19b8cd4fc42feec5
 				}
 			}
 		}
