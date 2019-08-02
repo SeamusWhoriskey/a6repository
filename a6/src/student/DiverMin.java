@@ -50,6 +50,13 @@ public class DiverMin implements SewerDiver {
 	@Override
 	public void find(FindState state) {
 		
+		// Dumb find method
+		dumbFind(state);
+		
+	}
+	
+	
+	public void dumbFind(FindState state) {
 		long curr_id = state.currentLocation();
 		for(NodeStatus z : state.neighbors()) {
 			if (!visited.contains(z.getId())) {
@@ -176,11 +183,11 @@ public class DiverMin implements SewerDiver {
 		
 		// dist is a Heap that will contain the distance 
 		// from the start node to each other node.
-		Heap<Node, Double> 	dist 	= new Heap<Node, Double>(Comparator.reverseOrder());
+		Heap<Node, Double> 	dist 	= new Heap<Node, Double>(Comparator.naturalOrder());
 
 		// Initializations of values for dist and parents.
 		for (Node neighbor : unvisited) {
-				dist.add(neighbor, Double.POSITIVE_INFINITY);
+				dist.add(neighbor, Double.NEGATIVE_INFINITY);
 			parents.put(neighbor, null);	
 		}
 		// set the distance of the start node to itself as 0.
