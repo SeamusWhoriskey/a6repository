@@ -103,16 +103,13 @@ public class DiverMin implements SewerDiver {
 		
 		// Dumb shortest path version
 		
-//		dumbFlee(state);
+		dumbFlee(state);
 		
-		// Less dumb method:
-		// When walking back, we want to find all paths from the ring to 
-		// the origin with length <= n (n = num steps remaining), and find
-		// which one has most coins. One way to do this would be a HashMap
-		// With k = path, v = # coins in path.
 		
-
-		maxPath(state);
+		
+//		moveFlee(state, highestValPath(state));
+		
+//		maxPath(state);
 		
 		
 		
@@ -202,7 +199,7 @@ public class DiverMin implements SewerDiver {
 			dist.poll();
 			
 			// If the current node's closest neighbor is not connected, break
-			if (dist_curr == Double.POSITIVE_INFINITY) {
+			if (dist_curr == Double.NEGATIVE_INFINITY) {
 				break;
 			}
 
@@ -257,7 +254,15 @@ public class DiverMin implements SewerDiver {
 
 	
 	
-	/**  This ones gonna take a long fucking time to run */
+	
+	
+	/**  This ones gonna take a long fucking time to run 
+	 *   Less dumb method:
+	 *	 When walking back, we want to find all paths from the ring to 
+	 *	 the origin with length <= n (n = num steps remaining), and find
+	 *	 which one has most coins. One way to do this would be a HashMap
+	 *	 With k = path, v = # coins in path.
+	 * */
 	private List<Long> maxPath(FleeState state){
 		
 
