@@ -51,19 +51,50 @@ public class DiverMin implements SewerDiver {
 	public void find(FindState state) {
 		
 		// Dumb find method
-		dumbFind(state);
+//		dumbFind(state);
+		
+		// Less dumb find method
+		lessDumbFind(state);
 		
 	}
 	
 	
 	public void dumbFind(FindState state) {
+		
 		long curr_id = state.currentLocation();
+		
+		if (state.distanceToRing() == 0) {
+			return;
+		}
+		
 		for(NodeStatus z : state.neighbors()) {
 			if (!visited.contains(z.getId())) {
 				visited.add(z.getId());
 				state.moveTo(z.getId());
-				find(state);
-				
+				dumbFind(state);
+				if (state.distanceToRing() == 0) {
+					return;
+				}
+				state.moveTo(curr_id);
+			}
+		}
+	}
+	
+	public void lessDumbFind(FindState state) {
+		long curr_id = state.currentLocation();
+		
+		List<NodeStatus> sorted_neighbors = sortNeighbors(state);
+		
+		if (state.distanceToRing() == 0) {
+			return;
+		}
+		
+		
+		for (NodeStatus nbr : sorted_neighbors) {
+			if (!visited.contains(nbr.getId())) {
+				visited.add(nbr.getId());
+				state.moveTo(nbr.getId());
+				lessDumbFind(state);
 				if (state.distanceToRing() == 0) {
 					return;
 				}
@@ -71,6 +102,24 @@ public class DiverMin implements SewerDiver {
 				
 			}
 		}
+	}
+	
+	private List<NodeStatus> sortNeighbors(FindState state) {
+		
+		Heap<NodeStatus, Integer> sorted_neighbors = new Heap<NodeStatus, Integer>(Comparator.reverseOrder());
+		
+		for (NodeStatus nbr : state.neighbors()) {
+			int d = nbr.getDistanceToTarget();
+			sorted_neighbors.add(nbr, d);
+		}
+		
+		List<NodeStatus> out_list = new ArrayList<NodeStatus>();
+		
+		while (sorted_neighbors.size() > 0) {
+			out_list.add(sorted_neighbors.poll());
+		}
+		
+		return out_list;
 	}
 
 	
@@ -103,11 +152,15 @@ public class DiverMin implements SewerDiver {
 		
 		// Dumb shortest path version
 		
-		dumbFlee(state);
+//		dumbFlee(state);
 		
+//		randomFlee(state);
 		
+//		getBestCoinFlee(state);
 		
-//		moveFlee(state, highestValPath(state));
+		getBestCoinFlee(state);
+		
+//		highestValPath(state);
 		
 //		maxPath(state);
 		
@@ -143,17 +196,8 @@ public class DiverMin implements SewerDiver {
  	}
 	
 
-	/** Flees using the least amount of steps possible, does not take score
-	 * into account. */
-	@SuppressWarnings("unused")
-	private void dumbFlee(FleeState state) {
-		List<Node> shortest_path = GraphAlgorithms.shortestPath(state.currentNode(), state.getExit());
-		moveFlee(state, shortest_path);
-		
-	}
-	
 	/** Moves Min along the path given to it, used as a helper function in the flee functions. */
-	private void moveFlee(FleeState state, List<Node> path) {
+	private static void moveFlee(FleeState state, List<Node> path) {
 		path.remove(0);
 		for (Node n : path) {
 			state.moveTo(n);
@@ -161,19 +205,88 @@ public class DiverMin implements SewerDiver {
 		
 	}
 	
+	/** Flees using the least amount of steps possible, does not take score
+	 * into account. */
+	private void dumbFlee(FleeState state) {
+		List<Node> shortest_path = GraphAlgorithms.shortestPath(state.currentNode(), state.getExit());
+		moveFlee(state, shortest_path);
+		
+	}
+	
+	
+	
+	
+	private void randomFlee(FleeState state) {
+		
+
+		List<Node> random_path = new ArrayList<Node>();
+		Node curr_node = state.currentNode();
+		Node exit = state.getExit();
+		int shortest_dist = GraphAlgorithms.shortestPath(state.currentNode(), state.getExit()).size();
+		
+		while (7*shortest_dist < state.stepsLeft()) {
+			
+			random_path.add(curr_node);
+			
+			List<Node> nbrs = new ArrayList<Node>(curr_node.getNeighbors());
+			Collections.shuffle(nbrs);
+			curr_node = nbrs.remove(0);
+			
+			state.moveTo(curr_node);
+			shortest_dist = GraphAlgorithms.shortestPath(state.currentNode(), state.getExit()).size();
+		}
+		
+		for (Node n : GraphAlgorithms.shortestPath(curr_node, exit)) {
+			if (!n.equals(curr_node)) {
+				state.moveTo(n);
+			}
+			
+		}
+		
+	}
+	
+	
+	private void getBestCoinFlee(FleeState state) {
+		
+		Node curr_node = state.currentNode();
+		Node exit = state.getExit();
+		int max_val = -1;
+		int curr_coins;
+		int dist_to;
+		int dist_exit = GraphAlgorithms.shortestPath(curr_node, exit).size();
+		Node best_node = exit;
+		
+		for (Node n : state.allNodes()) {
+			curr_coins = n.getTile().coins();
+			dist_to = GraphAlgorithms.shortestPath(curr_node, n).size();
+			dist_exit = GraphAlgorithms.shortestPath(n, exit).size();
+			if (curr_coins/dist_to > max_val) {
+				if (dist_to + dist_exit < state.stepsLeft()/7 - 1) {
+					max_val = curr_coins/dist_to;
+					best_node = n;
+				}
+			}
+		}
+		moveFlee(state, GraphAlgorithms.shortestPath(curr_node, best_node));
+		if (best_node != exit) {
+			getBestCoinFlee(state);
+		}
+		
+		
+		
+	}
+	
+	
+
+	
 
 	
 	public static 
-	List<Node> highestValPath(FleeState state) {
+	void highestValPath(FleeState state) {
 		
 		// Set unvisited contains all the unvisited nodes.
 		Set<Node> unvisited = new HashSet<Node>(state.allNodes());
 		
-		// If there is no connection from start to end, return an empty List.
-		// (Unnecessary I think)
-		if (!unvisited.contains(state.getExit())) {
-			return new ArrayList<Node>();
-		}
 		
 		// parents stores the parent of a Node n as a Node.
 		HashMap<Node, Node> 		parents 		= new HashMap<Node, Node>();
@@ -217,7 +330,7 @@ public class DiverMin implements SewerDiver {
 										+ node_curr.outgoing().get(neighbor).label();
 					// If new weight is less than the current weight of the neighbor
 					// in dist,
-					if (new_weight < dist.priority(neighbor))  {
+					if (new_weight > dist.priority(neighbor))  {
 						// Set the weight of neighbor to be new_weight
 						dist.changePriority(neighbor, new_weight);
 						// Set the parent of neighbor to node_curr
@@ -228,7 +341,8 @@ public class DiverMin implements SewerDiver {
 			}
 		}
 		// Use helper method to convert parents to list, return the list made.
-		return parentsToList(parents, state.currentNode(), state.getExit());
+		List<Node> optimal_path = parentsToList(parents, state.currentNode(), state.getExit());
+		moveFlee(state, optimal_path);
 	}
 	
 	/** Helper method parentsToList converts a hashmap of parents into a list
@@ -256,7 +370,7 @@ public class DiverMin implements SewerDiver {
 	
 	
 	
-	/**  This ones gonna take a long fucking time to run 
+	/**  This ones gonna take a long fucking time to run O(4^num steps) to be exact
 	 *   Less dumb method:
 	 *	 When walking back, we want to find all paths from the ring to 
 	 *	 the origin with length <= n (n = num steps remaining), and find
@@ -265,8 +379,7 @@ public class DiverMin implements SewerDiver {
 	 * */
 	private List<Long> maxPath(FleeState state){
 		
-
-		int high_score = -1;
+//		int high_score = -1;
 		
 		// best_path will store the IDs of each node visited in the 
 		// optimal path.

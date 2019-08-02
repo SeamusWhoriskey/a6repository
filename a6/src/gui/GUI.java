@@ -225,7 +225,7 @@ public class GUI extends JFrame {
 				return;
 			}
 		}
-
+//		seed = 20192110;
 		GameState.runNewGame(seed, true, new DiverMin());
 	}
 }
