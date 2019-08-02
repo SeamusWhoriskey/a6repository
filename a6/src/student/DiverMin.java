@@ -58,7 +58,7 @@ public class DiverMin implements SewerDiver {
 		
 	}
 	
-	
+	/** dumbFind uses a dfs walk algorithm to find the ring. */
 	public void dumbFind(FindState state) {
 		
 		long curr_id = state.currentLocation();
@@ -80,26 +80,39 @@ public class DiverMin implements SewerDiver {
 		}
 	}
 	
+	/** lessDumbFind, like dumbFind uses a dfs walk algorithm,
+	 * but explores the highest priority (shortest distance to 
+	 * the ring) neighbor first. */
 	public void lessDumbFind(FindState state) {
+		
+		// curr_id holds the current location 
 		long curr_id = state.currentLocation();
 		
+		// sorted_neighbors hold the neighbors of the current node.
 		List<NodeStatus> sorted_neighbors = sortNeighbors(state);
 		
+		// ends the search when Min is on the ring.
 		if (state.distanceToRing() == 0) {
 			return;
 		}
 		
-		
+		// for each neighbor nbr, sorted by priority
 		for (NodeStatus nbr : sorted_neighbors) {
+			// if the node has not yet been visited,
 			if (!visited.contains(nbr.getId())) {
+				// add nbr to the visited set
 				visited.add(nbr.getId());
+				// move Min to nbr
 				state.moveTo(nbr.getId());
+				// recursively call the method.
 				lessDumbFind(state);
+				// ends the search when Min is on the ring.
 				if (state.distanceToRing() == 0) {
 					return;
 				}
+				// Move back to the current node if the ring was
+				// not in the current path.
 				state.moveTo(curr_id);
-				
 			}
 		}
 	}
@@ -164,34 +177,6 @@ public class DiverMin implements SewerDiver {
 		
 //		maxPath(state);
 		
-		
-		
-		
-		
-		
-//		//Get current location
-//		Node HERE_I_AM = state.currentNode();
-//		//Get exit node, to save computing time on the loops
-//		Node EXIT = state.getExit();
-//		//Use Dijkstra's algorithm to get the minimum distance to the exit
-//	
-//		int STEPS_TO_EXIT = 0;
-//		
-//		//While the current position is not the exit
-//		while (state.currentNode() != EXIT) {
-//			
-//			//Flee once the length of the shortest path approaches the steps left 
-//			if(state.stepsLeft() < STEPS_TO_EXIT+5) {
-//				//Get a list of the nodes in the shortest path
-//				List<Node> HOME_RUN = GraphAlgorithms.shortestPath(state.currentNode(), EXIT);
-//				for(Node a : HOME_RUN) {
-//					state.moveTo(a);
-//				}
-//			}
-//			//Else, chart a path towards the most coins possible
-//			
-//		}
-//		return;
 		return;
  	}
 	
@@ -214,9 +199,7 @@ public class DiverMin implements SewerDiver {
 	}
 	
 	
-	
-	
-	private void randomFlee(FleeState state) {
+	private static void randomFlee(FleeState state) {
 		
 
 		List<Node> random_path = new ArrayList<Node>();
@@ -246,38 +229,58 @@ public class DiverMin implements SewerDiver {
 	}
 	
 	
-	
 	/** getBestCoinFlee finds the shortest path to the "highest scoring"
 	 * node -- the scoring of each tile is given as 
 	 * (value of coin on tile)/(shortest distance to tile) */
 	private void getBestCoinFlee(FleeState state) {
 		
+		// Initialization of useful variables:
+		// curr_node stores the current Node.
 		Node curr_node = state.currentNode();
+		// exit stores the exit node.
 		Node exit = state.getExit();
-		int max_val = -1;
-		int curr_coins;
-		int dist_to;
-		int dist_exit = GraphAlgorithms.shortestPath(curr_node, exit).size();
+		// max_val stores the highest value of (value of coin on tile)/(shortest distance to tile)
+		double max_val = -1.0;
+		// curr_score holds the current score of a Node n
+		double curr_score;
+		// curr_coins holds the number of coins on the current tile.
+		double curr_coins;
+		// dist_to holds the distance from the current node to a Node n
+		double dist_to;
+		// dist_exit holds the shortest distance from a node n to the exit
+		double dist_exit = GraphAlgorithms.shortestPath(curr_node, exit).size();
+		// best_node holds the node at which max_val occurs.
 		Node best_node = exit;
 		
+		// For each node, determine their score and find the max score.
 		for (Node n : state.allNodes()) {
-			curr_coins = n.getTile().coins();
-			dist_to = GraphAlgorithms.shortestPath(curr_node, n).size();
-			dist_exit = GraphAlgorithms.shortestPath(n, exit).size();
-			if (curr_coins/dist_to > max_val) {
-				if (dist_to + dist_exit < state.stepsLeft()/7 - 1) {
-					max_val = curr_coins/dist_to;
-					best_node = n;
+			// if statement to avoid error that was occurring
+			if (n != curr_node && n != exit) {
+				// set curr_coins, dist_to and dist_exit
+				curr_coins = n.getTile().coins();
+				dist_to = GraphAlgorithms.shortestPath(curr_node, n).size();
+				dist_exit = GraphAlgorithms.shortestPath(n, exit).size();
+				curr_score = curr_coins/dist_to;
+				// if the current score is better than max_val
+				if (curr_score > max_val) {
+					// If there is a path from curr_node to n to exit
+					// that is less than the number of steps left,
+					if (dist_to + dist_exit < state.stepsLeft()/7 - 1) {
+						// set max_val to the current score
+						max_val = curr_score;
+						// set the best node to n
+						best_node = n;
+					}
 				}
 			}
 		}
+		
+		// move to the best overall node,
 		moveFlee(state, GraphAlgorithms.shortestPath(curr_node, best_node));
+		// if the best node is not the exit, call this method again.
 		if (best_node != exit) {
 			getBestCoinFlee(state);
 		}
-		
-		
-		
 	}
 	
 	
@@ -375,6 +378,7 @@ public class DiverMin implements SewerDiver {
 	
 	
 	/**  This ones gonna take a long fucking time to run O(4^num steps) to be exact
+	 * 	 DOES NOT WORK
 	 *   Less dumb method:
 	 *	 When walking back, we want to find all paths from the ring to 
 	 *	 the origin with length <= n (n = num steps remaining), and find
