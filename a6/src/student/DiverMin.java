@@ -246,6 +246,10 @@ public class DiverMin implements SewerDiver {
 	}
 	
 	
+	
+	/** getBestCoinFlee finds the shortest path to the "highest scoring"
+	 * node -- the scoring of each tile is given as 
+	 * (value of coin on tile)/(shortest distance to tile) */
 	private void getBestCoinFlee(FleeState state) {
 		
 		Node curr_node = state.currentNode();
