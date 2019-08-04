@@ -10,14 +10,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-
+import a4.Heap;
 import game.FindState;
 import game.FleeState;
 import game.NodeStatus;
 import game.SewerDiver;
+import graph.Edge;
+import graph.LabeledEdge;
+import student.GraphAlgorithms.Path;
 import game.Node;
 
 
+@SuppressWarnings("unused")
 public class DiverMin implements SewerDiver {
 	
 	
@@ -50,37 +54,12 @@ public class DiverMin implements SewerDiver {
 	@Override
 	public void find(FindState state) {
 		
-		// Dumb find method
-//		dumbFind(state);
-		
-		// Less dumb find method
 		lessDumbFind(state);
 		
 	}
 	
-	/** dumbFind uses a dfs walk algorithm to find the ring. */
-	public void dumbFind(FindState state) {
-		
-		long curr_id = state.currentLocation();
-		
-		if (state.distanceToRing() == 0) {
-			return;
-		}
-		
-		for(NodeStatus z : state.neighbors()) {
-			if (!visited.contains(z.getId())) {
-				visited.add(z.getId());
-				state.moveTo(z.getId());
-				dumbFind(state);
-				if (state.distanceToRing() == 0) {
-					return;
-				}
-				state.moveTo(curr_id);
-			}
-		}
-	}
 	
-	/** lessDumbFind, like dumbFind uses a dfs walk algorithm,
+	/** lessDumbFind uses a dfs walk algorithm,
 	 * but explores the highest priority (shortest distance to 
 	 * the ring) neighbor first. */
 	public void lessDumbFind(FindState state) {
@@ -100,6 +79,7 @@ public class DiverMin implements SewerDiver {
 		for (NodeStatus nbr : sorted_neighbors) {
 			// if the node has not yet been visited,
 			if (!visited.contains(nbr.getId())) {
+				
 				// add nbr to the visited set
 				visited.add(nbr.getId());
 				// move Min to nbr
@@ -117,15 +97,24 @@ public class DiverMin implements SewerDiver {
 		}
 	}
 	
+	/** sortNeighbors sorts the neighbors of the current node in order of
+	 * least to most distance. */
 	private List<NodeStatus> sortNeighbors(FindState state) {
 		
+		// sorted_neighbors will hold the neighbors of the current node as a min heap.
 		Heap<NodeStatus, Integer> sorted_neighbors = new Heap<NodeStatus, Integer>(Comparator.reverseOrder());
 		
-		for (NodeStatus nbr : state.neighbors()) {
-			int d = nbr.getDistanceToTarget();
-			sorted_neighbors.add(nbr, d);
+		// This is here for that extra 0.01 score multiplier lol
+		List<NodeStatus> neighbors = new ArrayList<NodeStatus>(state.neighbors());
+		Collections.reverse(neighbors);
+		
+		// for each neighbor of the current node
+		for (NodeStatus nbr : neighbors) {
+			// add the neighbor with its distance to the ring as the heap
+			sorted_neighbors.add(nbr, nbr.getDistanceToTarget());
 		}
 		
+		// Turn the min_heap to a list, so that it can be iterated over.
 		List<NodeStatus> out_list = new ArrayList<NodeStatus>();
 		
 		while (sorted_neighbors.size() > 0) {
@@ -163,72 +152,25 @@ public class DiverMin implements SewerDiver {
 	@Override
 	public void flee(FleeState state) {
 		
-		// Dumb shortest path version
-		
-//		dumbFlee(state);
-		
-//		randomFlee(state);
-		
-//		getBestCoinFlee(state);
-		
 		getBestCoinFlee(state);
-		
-//		highestValPath(state);
-		
-//		maxPath(state);
+
 		
 		return;
  	}
 	
 
 	/** Moves Min along the path given to it, used as a helper function in the flee functions. */
-	private static void moveFlee(FleeState state, List<Node> path) {
+	private void moveFlee(FleeState state, List<Node> path) {
+		// Removes the starting node
 		path.remove(0);
+		// For each remaining node in the path, 
 		for (Node n : path) {
+			// move to the next node.
 			state.moveTo(n);
 		}
 		
 	}
-	
-	/** Flees using the least amount of steps possible, does not take score
-	 * into account. */
-	private void dumbFlee(FleeState state) {
-		List<Node> shortest_path = GraphAlgorithms.shortestPath(state.currentNode(), state.getExit());
-		moveFlee(state, shortest_path);
 		
-	}
-	
-	
-	private static void randomFlee(FleeState state) {
-		
-
-		List<Node> random_path = new ArrayList<Node>();
-		Node curr_node = state.currentNode();
-		Node exit = state.getExit();
-		int shortest_dist = GraphAlgorithms.shortestPath(state.currentNode(), state.getExit()).size();
-		
-		while (7*shortest_dist < state.stepsLeft()) {
-			
-			random_path.add(curr_node);
-			
-			List<Node> nbrs = new ArrayList<Node>(curr_node.getNeighbors());
-			Collections.shuffle(nbrs);
-			curr_node = nbrs.remove(0);
-			
-			state.moveTo(curr_node);
-			shortest_dist = GraphAlgorithms.shortestPath(state.currentNode(), state.getExit()).size();
-		}
-		
-		for (Node n : GraphAlgorithms.shortestPath(curr_node, exit)) {
-			if (!n.equals(curr_node)) {
-				state.moveTo(n);
-			}
-			
-		}
-		
-	}
-	
-	
 	/** getBestCoinFlee finds the shortest path to the "highest scoring"
 	 * node -- the scoring of each tile is given as 
 	 * (value of coin on tile)/(shortest distance to tile) */
@@ -251,185 +193,38 @@ public class DiverMin implements SewerDiver {
 		double dist_exit = GraphAlgorithms.shortestPath(curr_node, exit).size();
 		// best_node holds the node at which max_val occurs.
 		Node best_node = exit;
-		
-		// For each node, determine their score and find the max score.
-		for (Node n : state.allNodes()) {
-			// if statement to avoid error that was occurring
-			if (n != curr_node && n != exit) {
-				// set curr_coins, dist_to and dist_exit
-				curr_coins = n.getTile().coins();
-				dist_to = GraphAlgorithms.shortestPath(curr_node, n).size();
-				dist_exit = GraphAlgorithms.shortestPath(n, exit).size();
-				curr_score = curr_coins/dist_to;
-				// if the current score is better than max_val
-				if (curr_score > max_val) {
-					// If there is a path from curr_node to n to exit
-					// that is less than the number of steps left,
-					if (dist_to + dist_exit < state.stepsLeft()/7 - 1) {
-						// set max_val to the current score
-						max_val = curr_score;
-						// set the best node to n
-						best_node = n;
-					}
+
+		List<Node> all_nodes = new ArrayList<Node>(state.allNodes());
+		all_nodes.remove(curr_node);
+		all_nodes.remove(exit);
+		// For each node that is not the exit or current node, 
+		// determine their score and find the max score.
+		for (Node n : all_nodes) {
+			// set curr_coins, dist_to, dist_exit, and curr_score
+			curr_coins = n.getTile().coins();
+			dist_to = GraphAlgorithms.shortestPath(curr_node, n).size();
+			dist_exit = GraphAlgorithms.shortestPath(n, exit).size();
+			curr_score = curr_coins/(dist_to);
+			// if the current score is better than max_val
+			if (curr_score > max_val) {
+				// If there is a path from curr_node to n to exit
+				// that is less than the number of steps left,
+				if (dist_to + dist_exit < state.stepsLeft()/7 - 1) {
+					// set max_val to the current score
+					max_val = curr_score;
+					// set the best node to n
+					best_node = n;
 				}
 			}
 		}
 		
 		// move to the best overall node,
 		moveFlee(state, GraphAlgorithms.shortestPath(curr_node, best_node));
+		
 		// if the best node is not the exit, call this method again.
 		if (best_node != exit) {
 			getBestCoinFlee(state);
 		}
 	}
-	
-	
-
-	
-
-	
-	public static 
-	void highestValPath(FleeState state) {
-		
-		// Set unvisited contains all the unvisited nodes.
-		Set<Node> unvisited = new HashSet<Node>(state.allNodes());
-		
-		
-		// parents stores the parent of a Node n as a Node.
-		HashMap<Node, Node> 		parents 		= new HashMap<Node, Node>();
-		
-		// dist is a Heap that will contain the distance 
-		// from the start node to each other node.
-		Heap<Node, Double> 	dist 	= new Heap<Node, Double>(Comparator.naturalOrder());
-
-		// Initializations of values for dist and parents.
-		for (Node neighbor : unvisited) {
-				dist.add(neighbor, Double.NEGATIVE_INFINITY);
-			parents.put(neighbor, null);	
-		}
-		// set the distance of the start node to itself as 0.
-		dist.changePriority(state.currentNode(),  0.0);
-
-		// While there are still unvisited nodes, 
-		while (!unvisited.isEmpty()) {				
-
-			// node_curr denotes the current node of Dijkstra's algorithm.
-			Node node_curr = dist.peek();			
-			Double dist_curr = dist.priority(node_curr);
-			dist.poll();
-			
-			// If the current node's closest neighbor is not connected, break
-			if (dist_curr == Double.NEGATIVE_INFINITY) {
-				break;
-			}
-
-			// Remove the current node from the unvisited set, as we are now visiting it
-			unvisited.remove(node_curr);
-			
-			// For each neighbor of the current node,
-			for (Node neighbor : node_curr.outgoing().keySet()) {
-				// If neighbor is unvisited,
-				if (unvisited.contains(neighbor)) {
-					// Set the variable new_weight to equal the current distance from
-					// start to node_curr plus the edge weight from the current node
-					// to neighbor.
-					double new_weight = dist_curr 
-										+ node_curr.outgoing().get(neighbor).label();
-					// If new weight is less than the current weight of the neighbor
-					// in dist,
-					if (new_weight > dist.priority(neighbor))  {
-						// Set the weight of neighbor to be new_weight
-						dist.changePriority(neighbor, new_weight);
-						// Set the parent of neighbor to node_curr
-						parents.put(neighbor, node_curr);
-					}
-
-				}
-			}
-		}
-		// Use helper method to convert parents to list, return the list made.
-		List<Node> optimal_path = parentsToList(parents, state.currentNode(), state.getExit());
-		moveFlee(state, optimal_path);
-	}
-	
-	/** Helper method parentsToList converts a hashmap of parents into a list
-	 * of nodes with a path from start to end. */ 
-	private static
-	List<Node> parentsToList(HashMap<Node, Node> parents, Node start, Node end) {
-		// Initialization of out_list, the list that is to be returned.
-		List<Node> out_list = new ArrayList<Node>();
-		out_list.add(end);
-		Node last_added = end;
-		// While the out_list does not contain start,
-		while (!out_list.contains(start)) {
-			// add the parent of the last added node to the list,
-			// and change variable last_added to be the parent of
-			// the last added node in the list.
-			last_added = parents.get(last_added);
-			out_list.add(last_added);
-		}
-		// Since the list is backwards, flip it.
-		Collections.reverse(out_list);
-		return out_list;
-	}
-
-	
-	
-	
-	
-	/**  This ones gonna take a long fucking time to run O(4^num steps) to be exact
-	 * 	 DOES NOT WORK
-	 *   Less dumb method:
-	 *	 When walking back, we want to find all paths from the ring to 
-	 *	 the origin with length <= n (n = num steps remaining), and find
-	 *	 which one has most coins. One way to do this would be a HashMap
-	 *	 With k = path, v = # coins in path.
-	 * */
-	private List<Long> maxPath(FleeState state){
-		
-//		int high_score = -1;
-		
-		// best_path will store the IDs of each node visited in the 
-		// optimal path.
-		List<Long> 	best_path = null;
-		
-		List<Node> visited = new ArrayList<Node>();
-		visited.add(state.currentNode());
-		allPaths(state.currentNode(), state.getExit(), state.stepsLeft(), visited);
-		
-		
-		
-		
-		return best_path;
-		
-	}
-	
-	
-	private List<List<Node>> allPaths(Node node_from, 
-			Node exit, int steps_left, 
-			List<Node> visited) {
-		
-		// Using a depth first search, traverse every possible path
-		// from start to end that takes steps_left steps or less.
-		
-		if (node_from == exit) {
-			// Add the path to something
-		}
-		
-		if (steps_left <= 0) {
-			
-			return null;
-		}
-		
-		for (Node neighbor : node_from.getNeighbors()) {
-			visited.add(neighbor);
-			allPaths(neighbor, exit, steps_left-1, visited);
-			
-		}
-
-		
-		return null;
-	}
-	
 	
 }
