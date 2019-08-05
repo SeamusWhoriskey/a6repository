@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,9 +54,7 @@ public class DiverMin implements SewerDiver {
 	 * Some modification is necessary to make the search better, in general. */
 	@Override
 	public void find(FindState state) {
-		
 		lessDumbFind(state);
-		
 	}
 	
 	
@@ -125,6 +124,8 @@ public class DiverMin implements SewerDiver {
 	}
 
 	
+	
+	
 	/** Flee the sewer system before the steps are all used, trying to <br>
 	 * collect as many coins as possible along the way. Your solution must ALWAYS <br>
 	 * get out before the steps are all used, and this should be prioritized above<br>
@@ -152,14 +153,22 @@ public class DiverMin implements SewerDiver {
 	@Override
 	public void flee(FleeState state) {
 		
+		// Setting up all_nodes, exit_dists
+		all_nodes.addAll(state.allNodes());
+		for (Node n : all_nodes) {exit_dists.put(n, getPathDist(n, state.getExit()));}
+		all_nodes.remove(state.currentNode());
+		all_nodes.remove(state.getExit());
 		getBestCoinFlee(state);
-
-		
-		return;
  	}
+	/** all_nodes stores all nodes that can be visited while going from the
+	 * current node to the exit. */
+	private List<Node> all_nodes = new ArrayList<Node>();
 	
-
-	/** Moves Min along the path given to it, used as a helper function in the flee functions. */
+	/** exit_dists stores the distance of each node to the exit. Used in 
+	 * setAllNodes function to reduce runtime. */
+	private Map<Node, Double> exit_dists = new HashMap<Node, Double>();
+	
+	/** Moves Min along the path given to it, used as a helper function in the getBestCoinFlee. */
 	private void moveFlee(FleeState state, List<Node> path) {
 		// Removes the starting node
 		path.remove(0);
@@ -168,7 +177,6 @@ public class DiverMin implements SewerDiver {
 			// move to the next node.
 			state.moveTo(n);
 		}
-		
 	}
 		
 	/** getBestCoinFlee finds the shortest path to the "highest scoring"
@@ -182,39 +190,31 @@ public class DiverMin implements SewerDiver {
 		// exit stores the exit node.
 		Node exit = state.getExit();
 		// max_val stores the highest value of (value of coin on tile)/(shortest distance to tile)
-		double max_val = -1.0;
+		double max_val = 0.0;
 		// curr_score holds the current score of a Node n
 		double curr_score;
 		// curr_coins holds the number of coins on the current tile.
 		double curr_coins;
 		// dist_to holds the distance from the current node to a Node n
 		double dist_to;
-		// dist_exit holds the shortest distance from a node n to the exit
-		double dist_exit = GraphAlgorithms.shortestPath(curr_node, exit).size();
+		
 		// best_node holds the node at which max_val occurs.
 		Node best_node = exit;
 
-		List<Node> all_nodes = new ArrayList<Node>(state.allNodes());
-		all_nodes.remove(curr_node);
-		all_nodes.remove(exit);
+		setAllNodes(state);
 		// For each node that is not the exit or current node, 
 		// determine their score and find the max score.
 		for (Node n : all_nodes) {
 			// set curr_coins, dist_to, dist_exit, and curr_score
 			curr_coins = n.getTile().coins();
-			dist_to = GraphAlgorithms.shortestPath(curr_node, n).size();
-			dist_exit = GraphAlgorithms.shortestPath(n, exit).size();
+			dist_to = getPathDist(curr_node, n);
 			curr_score = curr_coins/(dist_to);
 			// if the current score is better than max_val
 			if (curr_score > max_val) {
-				// If there is a path from curr_node to n to exit
-				// that is less than the number of steps left,
-				if (dist_to + dist_exit < state.stepsLeft()/7 - 1) {
-					// set max_val to the current score
-					max_val = curr_score;
-					// set the best node to n
-					best_node = n;
-				}
+				// set max_val to the current score
+				max_val = curr_score;
+				// set the best node to n
+				best_node = n;
 			}
 		}
 		
@@ -222,9 +222,70 @@ public class DiverMin implements SewerDiver {
 		moveFlee(state, GraphAlgorithms.shortestPath(curr_node, best_node));
 		
 		// if the best node is not the exit, call this method again.
-		if (best_node != exit) {
-			getBestCoinFlee(state);
-		}
+		if (best_node != exit) getBestCoinFlee(state);
 	}
 	
+	
+	/** setAllNodes removes all unreachable nodes in the field all_nodes 
+	 * given a current state */
+	private void setAllNodes(FleeState state) {
+		
+		// curr_node stores the current Node.
+		Node curr_node = state.currentNode();
+		// exit stores the exit node.
+		Node exit = state.getExit();
+		// dist_to holds the distance from the current node to a Node n
+		double dist_to;
+		// dist_exit holds the shortest distance from a node n to the exit
+		double dist_exit;
+		// dist_tot is the sum of dist_to and dist_exit
+		double dist_tot;
+		// dist_left holds the number of steps left
+		double dist_left = state.stepsLeft();
+		// to_be_removed holds all the nodes to be removed from all_nodes
+		Collection<Node> to_be_removed = new ArrayList<Node>();
+		
+		// Remove the current node from the set of nodes, as it has already
+		// been visited.
+		all_nodes.remove(curr_node);
+		
+		// For all remaining nodes,
+		for (Node n : all_nodes) {
+			// Get the distance from the current node to node n
+			// and the distance from n to the exit
+			dist_to = getPathDist(curr_node, n);
+			dist_exit = exit_dists.get(n);
+			dist_tot = dist_to + dist_exit;
+			// if dist_tot is greater than dist_left, this node
+			// is not reachable, and is then removed from all_nodes.
+			if (dist_tot > dist_left) {
+				to_be_removed.add(n);
+			}
+		}
+		all_nodes.removeAll(to_be_removed);
+	}
+	
+	/** getPathDist gets the shortest path distance from  
+	 * Node start to Node end */
+	private double getPathDist(Node start, Node end) {
+		
+		// Find the shortest path between nodes start and end.
+		List<Node> path = GraphAlgorithms.shortestPath(start, end); 
+		// dist holds the minimum distance from start to end
+		double dist = 0;
+		
+		// If the path size is 1 or less, return 0 as start = end.
+		// (we know that start and end are connected as it is a 
+		// connected system)
+		if (path.size() <= 1) return dist;
+		
+		Node prev_node = path.get(0);
+		path.remove(0);
+		for (Node n : path) {
+			// Add the edge weight of each edge in the path to dist
+			dist += n.getEdge(prev_node).label();
+			prev_node = n;
+		}
+		return dist;
+	}
 }
